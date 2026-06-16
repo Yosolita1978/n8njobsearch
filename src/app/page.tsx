@@ -44,6 +44,31 @@ export default function LandingPage() {
       <section className="mt-8 rounded-xl border border-accent/30 bg-card p-5">
         <RoleForm />
       </section>
+
+      <section className="mt-8 border-t border-border pt-6">
+        <p className="text-sm text-muted">
+          Built by{" "}
+          <span className="font-medium text-foreground">Cristina Rodriguez</span>
+          {" · "}
+          <a
+            href="https://www.yosola.co/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent underline-offset-2 hover:underline"
+          >
+            Website
+          </a>
+          {" · "}
+          <a
+            href="https://www.linkedin.com/in/crissrodriguez/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-accent underline-offset-2 hover:underline"
+          >
+            LinkedIn
+          </a>
+        </p>
+      </section>
     </div>
   );
 }
