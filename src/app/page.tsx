@@ -1,65 +1,49 @@
-import Image from "next/image";
+import { RoleForm } from "@/components/role-form";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
+      <section className="space-y-4">
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          Build a job hunter that works while you sleep.
+        </h1>
+        <p className="text-lg text-muted">
+          In a few short sessions you will build your own workflow that hunts
+          for jobs, scores them, and drafts a tailored cover letter. It is built
+          around a role that matters to you, not a demo. You do not need to be an
+          engineer.
+        </p>
+      </section>
+
+      <section className="mt-8">
+        <div className="aspect-video w-full overflow-hidden rounded-xl border border-border bg-card">
+          <iframe
+            className="h-full w-full"
+            src="https://www.youtube.com/embed/wja5DA7yT0w"
+            title="Job hunter demo"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
+          />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <p className="mt-2 text-sm text-muted">
+          90 seconds: a daily run finds a remote job, scores it, and drops a
+          tailored cover letter into Google Drive.
+        </p>
+      </section>
+
+      <section className="mt-8 rounded-xl border border-border bg-card p-5">
+        <h2 className="text-lg font-semibold">The trap this beats</h2>
+        <p className="mt-2 text-muted">
+          Checking boards by hand is slow, and many jobs marked remote actually
+          want you to be local. Your hunter reads each posting, keeps only the
+          truly remote ones, and flags the sneaky ones.
+        </p>
+      </section>
+
+      <section className="mt-8 rounded-xl border border-accent/30 bg-card p-5">
+        <RoleForm />
+      </section>
     </div>
   );
 }

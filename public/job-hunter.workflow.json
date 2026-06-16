@@ -1,0 +1,887 @@
+{
+  "name": "EdTech Job Search",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -32,
+        0
+      ],
+      "id": "59bf1d77-58d9-485a-985b-0273c441c2b4",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search.json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google"
+            },
+            {
+              "name": "q",
+              "value": "site:teamedforlearning.com remote contract instructional design"
+            },
+            {
+              "name": "num",
+              "value": "20"
+            },
+            {
+              "name": "api_key",
+              "value": "YOUR_SERPAPI_API_KEY"
+            },
+            {
+              "name": "tbs",
+              "value": "qdr:w"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        208,
+        0
+      ],
+      "id": "a5aa8546-56a1-4c3e-b704-e4f0a2c77f7d",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.first().json.organic_results;\nif (!Array.isArray(results)) {\n  throw new Error(`Expected organic_results array, got ${typeof results}. Check the SerpApi response.`);\n}\n\nreturn results\n  .filter((r) => r.link && r.link.includes('/job-post/'))\n  .map((r) => ({\n    json: {\n      title: r.title || '',\n      url: r.link || '',\n      snippet: r.snippet || '',\n    },\n  }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        416,
+        0
+      ],
+      "id": "7ea49c02-4305-4b4d-a878-14ffb30a5d7d",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Title: {{ $json.title }}\nURL: {{ $json.url }}\nSnippet: {{ $json.snippet }}",
+        "options": {
+          "systemMessage": "You are a job-relevance scoring agent for Cristina, a software engineer \nand curriculum developer looking for remote AI/EdTech instructional design \nand curriculum development roles in the USA.\n\nScore each job 1-10. Apply these HARD FILTERS first — if any apply, score 1:\n- K-12 focused = score 1\n- On-site or in-office only = score 1\n- Math-specific curriculum = score 1\n- Manager or director level = score 1\n- Located outside the USA = score 1\n\nScore HIGHER for:\n- Contract or part-time = high\n- Remote = high\n- AI, EdTech, or instructional design focus = high\n- Curriculum developer or instructional designer title = high\n- Entry to mid level = high\n\nRespond ONLY in this exact JSON format:\n{\"score\": 8, \"reason\": \"Short explanation\", \"title\": \"the job title\", \"url\": \"the url\"}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1696,
+        -48
+      ],
+      "id": "6df5bfdd-7c17-4e36-9736-0b5a1792f525",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        496,
+        208
+      ],
+      "id": "c9c3eecd-96d2-48b8-9ba9-0627805dc7fc",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "qGz53wpHwgrEqHwL",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "job_alerts",
+        "dataToSend": "=defineBelow",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "title",
+              "fieldValue": "={{ JSON.parse($json.output).title }}"
+            },
+            {
+              "fieldId": "url",
+              "fieldValue": "={{ JSON.parse($json.output).url }}"
+            },
+            {
+              "fieldId": "score",
+              "fieldValue": "={{ Number(JSON.parse($json.output).score) }}"
+            },
+            {
+              "fieldId": "reason",
+              "fieldValue": "={{ JSON.parse($json.output).reason }}"
+            },
+            {
+              "fieldId": "location_caveat",
+              "fieldValue": "={{ $('Remote Gate').item.json.location_caveat }}"
+            },
+            {
+              "fieldId": "caveat_reason",
+              "fieldValue": "={{ $('Remote Gate').item.json.caveat_reason }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1968,
+        -288
+      ],
+      "id": "19dc8883-9014-41d0-a03e-badc9605e369",
+      "name": "Create a row",
+      "credentials": {
+        "supabaseApi": {
+          "id": "5gWgVF26jBxzqV7n",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=🎯 <b>EdTech Job Alert</b>\n\n🎯 <b>EdTech Job Alert</b>\n\n<b>{{ $json.title }}</b>\nScore: {{ $json.score }}/10\nWhy: {{ $json.reason }}\n\n{{ $json.url }}",
+        "additionalFields": {
+          "parse_mode": "HTML"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2288,
+        -352
+      ],
+      "id": "637c6e9b-f4cf-479a-9793-518e4357477c",
+      "name": "Send a text message",
+      "webhookId": "43ef8513-7035-46a8-b269-554d7339b8ca",
+      "credentials": {
+        "telegramApi": {
+          "id": "HVZBhN0eRp5Rtf0Y",
+          "name": "Telegram account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Title": "={{ $json.title }}",
+            "URL": "={{ $json.url }}",
+            "Score": "={{ $json.score }}",
+            "Reason": "={{ $json.reason }}",
+            "Date Found": "={{ $json.found_at }}",
+            "location_caveat": "={{ $json.location_caveat }}",
+            "Why?": "={{ $json.caveat_reason }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "URL",
+              "displayName": "URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Score",
+              "displayName": "Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Reason",
+              "displayName": "Reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Date Found",
+              "displayName": "Date Found",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "location_caveat",
+              "displayName": "location_caveat",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Aplied?",
+              "displayName": "Aplied?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Why?",
+              "displayName": "Why?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2320,
+        -96
+      ],
+      "id": "7021f10e-6e5b-4e74-94d6-a2358a06d5a0",
+      "name": "Append row in sheet",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "CwjPrk7KO7aUxfAh",
+          "name": "Google Sheets account 5"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "job_alerts",
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "2949e975-a694-40d7-8c73-440293010f50",
+      "name": "Get many rows",
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "5gWgVF26jBxzqV7n",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "e1fecd38-29dc-4f59-ac94-cbbb6fadf08d",
+              "leftValue": "={{ $json.skip }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1456,
+        0
+      ],
+      "id": "05d97589-eafe-4f9f-8fd1-efef112bb02d",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        624,
+        0
+      ],
+      "id": "0042ab9d-976f-41c9-830e-991fda59bed7",
+      "name": "Fetch job page"
+    },
+    {
+      "parameters": {
+        "jsCode": "  // Remote gate — Mode: Run Once for All Items\n  // Keeps fully-remote jobs, flags location caveats, and exposes the full\n  // job description so the cover-letter step can use it later.\n\n  const results = [];\n\n  const caveatPatterns = [\n    /candidates?\\s+local\\s+to/i,\n    /local\\s+to\\s+our/i,\n    /top\\s+consideration\\s+will\\s+be\\s+given\\s+to\\s+candidates\\s+local/i,\n    /preference\\s+(?:will\\s+be\\s+)?given\\s+to\\s+(?:local|candidates\\s+local)/i,\n    /must\\s+(?:be\\s+)?(?:located|based|reside|live)\\s+(?:in|within|near)/i,\n    /relocat/i,\n    /travel\\s+to\\s+(?:our\\s+)?offices?/i,\n  ];\n\n  function findCaveat(text) {\n    for (const re of caveatPatterns) {\n      const m = text.match(re);\n      if (m) {\n        const start = Math.max(0, m.index - 30);\n        return text.slice(start, m.index + m[0].length + 60).trim();\n      }\n    }\n    return null;\n  }\n\n  for (const item of $input.all()) {\n    const html = item.json.data;\n    if (typeof html !== 'string') {\n      throw new Error('Expected raw HTML in json.data. Set the Fetch job page HTTP Request \"Response Format\" to Text.');\n    }\n\n    const labelMatch = html.match(\n      /<div class=\"job-main-detail\">[\\s\\S]*?<label>\\s*([\\s\\S]*?)\\s*<\\/label>/i\n    );\n    if (!labelMatch) {\n      throw new Error('Could not find the work-model label. Paste the raw HTML so I can adjust the selector.');\n    }\n\n    const workModel = labelMatch[1].split('|')[0].trim();\n    if (workModel.toLowerCase() !== 'remote') {\n      continue;\n    }\n\n    const blocks = [...html.matchAll(\n      /<script[^>]+type=[\"']application\\/ld\\+json[\"'][^>]*>([\\s\\S]*?)<\\/script>/gi\n    )].map((m) => m[1].trim());\n\n    let job = null;\n    for (const block of blocks) {\n      let parsed;\n      try { parsed = JSON.parse(block); } catch { continue; }\n      if (parsed && parsed['@type'] === 'JobPosting') { job = parsed; break; }\n    }\n\n    const descText = ((job && job.description) || '')\n      .replace(/<[^>]+>/g, ' ')\n      .replace(/\\s+/g, ' ')\n      .trim();\n    const caveat = findCaveat(descText);\n\n    const org = job && job.hiringOrganization;\n    const canonical = (html.match(/<link rel=\"canonical\" href=\"([^\"]+)\"/i) || [])[1] || null;\n\n    results.push({\n      json: {\n        title: (job && job.title) || null,\n        company: (org && typeof org === 'object' ? org.name : org) || null,\n        url: canonical || item.json.url || null,\n        date_posted: (job && job.datePosted) || null,\n        work_model: workModel,\n        is_remote: true,\n        location_caveat: Boolean(caveat),\n        caveat_reason: caveat,\n        description: descText,   // ← NEW: full job text for the cover letter\n      },\n    });\n  }\n\n  return results;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "24280105-3481-4c5d-90e1-90198f0feac5",
+      "name": "Remote Gate"
+    },
+    {
+      "parameters": {
+        "jsCode": "  // Jobs already saved in the database.\n  const existingUrls = $('Get many rows').all().map(item => item.json.url);\n\n  // URLs that PASSED the remote filter (Remote Gate output).\n  const remoteUrls = $('Remote Gate').all().map(item => item.json.url);\n\n  // The scraped jobs WITH their snippet (the early parse node).\n  const scraped = $('Code in JavaScript').all();\n\n  // Keep only jobs that are BOTH remote AND brand new.\n  const newJobs = scraped.filter(item =>\n    remoteUrls.includes(item.json.url) &&     // must have survived the Remote Gate\n    !existingUrls.includes(item.json.url)     // must not already be in the DB\n  );\n\n  if (newJobs.length === 0) {\n    return [{ json: { skip: true } }];\n  }\n\n  return newJobs;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "196647bd-249f-4e72-8c8c-c3c7cb976fca",
+      "name": "Check for new alerts"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "documentURL": "YOUR_RESUME_DOC_ID"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        464,
+        384
+      ],
+      "id": "6450e66e-de0c-4ba6-99f9-ef32c8372b72",
+      "name": "Read Resume",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vIXeG3zKwKgh8LwB",
+          "name": "Google Docs OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4",
+          "mode": "list",
+          "cachedResultName": "GPT-4"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an expert career writer. Write concise, specific, genuine cover letters grounded ONLY in the candidate's real resume and the job description. No clichés, no generic filler, no invented experience. 250–350 words, first person, plain text (no markdown headings)."
+            },
+            {
+              "content": "=Write a tailored cover letter for this job, using only real details from my resume.\n\n  JOB TITLE: {{ $('Remote Gate').all().find(g => g.json.url === $json.url)?.json.title }}\n  COMPANY: {{ $('Remote Gate').all().find(g => g.json.url === $json.url)?.json.company }}\n\n  JOB DESCRIPTION:\n  {{ $('Remote Gate').all().find(g => g.json.url === $json.url)?.json.description }}\n\n  MY RESUME:\n  {{ $('Read Resume').first().json.content }}\n\n  Write it in first person, 250–350 words, specific to this role, ending with a short call to action. Plain text only.\n\n ALWAYS sign the letter as:\nCristina Rodriguez\n[LinkedIn](https://www.linkedin.com/in/crissrodriguez/) | [Portfolio](https://www.yosola.co/) | [GitHub] (https://github.com/Yosolita1978)\nyosola@gmail.com | 628-236-7431"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2384,
+        528
+      ],
+      "id": "1830cde2-433c-461a-9a7c-e6cd13d33fdf",
+      "name": "Write Cover Letter",
+      "credentials": {
+        "openAiApi": {
+          "id": "qGz53wpHwgrEqHwL",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "733cf460-05c9-43c6-a825-e23d75982c3c",
+              "name": "letter",
+              "value": "={{ $json.output[0].content[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "65364339-ef1c-49b6-bc75-ec6a33425a0b",
+              "name": "doc_title",
+              "value": "={{ \"Cover Letter - \" + ($('Remote Gate').all().find(g => g.json.url === $('Loop Over Items').first().json.url)?.json.title || \"Job\") + \" - \" + ($('Remote Gate').all().find(g => g.json.url\n  === $('Loop Over Items').first().json.url)?.json.company || \"\") }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1584,
+        480
+      ],
+      "id": "506bd5f8-b7ba-4a50-ac1f-7e38e72bcf31",
+      "name": "Prep Doc"
+    },
+    {
+      "parameters": {
+        "driveId": "=My Drive",
+        "folderId": "YOUR_DRIVE_FOLDER_ID",
+        "title": "={{ $json.doc_title }}"
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        480
+      ],
+      "id": "a1790c1e-c937-439e-bac7-09a917185f04",
+      "name": "Create a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vIXeG3zKwKgh8LwB",
+          "name": "Google Docs OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "={{ $('Prep Doc').first().json.letter }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.googleDocs",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        480
+      ],
+      "id": "6d014b9d-2377-4629-b7c3-74e8464d55cd",
+      "name": "Update a document",
+      "credentials": {
+        "googleDocsOAuth2Api": {
+          "id": "vIXeG3zKwKgh8LwB",
+          "name": "Google Docs OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "49f47537-f4ce-4b45-bebe-c4f1ffc79067",
+              "leftValue": "={{ $json.score }}",
+              "rightValue": 7,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2016,
+        0
+      ],
+      "id": "67d93934-1b1c-4ec1-9f51-eb86f6bf3bfa",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1824,
+        256
+      ],
+      "id": "c127d4e2-1a73-4f11-b655-ba7b61ad791b",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "chatId": "YOUR_TELEGRAM_CHAT_ID",
+        "text": "=📄 Cover letter ready for {{ $('Loop Over Items').first().json.title }}\n  https://docs.google.com/document/d/{{ $('Create a document').first().json.id }}/edit",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2208,
+        480
+      ],
+      "id": "c2ad28cb-55ae-4543-9942-7dfbf75ef442",
+      "name": "Send a text message1",
+      "webhookId": "fa60902e-fe74-4158-bafc-17edfd20c431",
+      "credentials": {
+        "telegramApi": {
+          "id": "HVZBhN0eRp5Rtf0Y",
+          "name": "Telegram account 4"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Schedule Trigger": [
+      {
+        "json": {
+          "timestamp": "2026-06-10T09:00:37.009-07:00",
+          "Readable date": "June 10th 2026, 9:00:37 am",
+          "Readable time": "9:00:37 am",
+          "Day of week": "Wednesday",
+          "Year": "2026",
+          "Month": "June",
+          "Day of month": "10",
+          "Hour": "09",
+          "Minute": "00",
+          "Second": "37",
+          "Timezone": "America/Los_Angeles (UTC-07:00)"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Read Resume",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Fetch job page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Create a row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows": {
+      "main": [
+        [
+          {
+            "node": "Check for new alerts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch job page": {
+      "main": [
+        [
+          {
+            "node": "Remote Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remote Gate": {
+      "main": [
+        [
+          {
+            "node": "Get many rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for new alerts": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Resume": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Cover Letter": {
+      "main": [
+        [
+          {
+            "node": "Prep Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prep Doc": {
+      "main": [
+        [
+          {
+            "node": "Create a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a document": {
+      "main": [
+        [
+          {
+            "node": "Update a document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Write Cover Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update a document": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "atCX7T0aBTJr64wE",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "e00323c4-25bb-435e-bf1d-93168b58aaa7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b9f24b39c45632dc417a2eebfb8ee1ff524fb66c28c812d1d641afc4967281b4"
+  },
+  "nodeGroups": [],
+  "id": "2T79e0QcXtd6nSms",
+  "tags": []
+}
