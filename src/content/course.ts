@@ -924,7 +924,7 @@ Write it in first person, 250–350 words, specific to this role, ending with a 
 ALWAYS sign the letter as:
 Cristina Rodriguez
 [LinkedIn](https://www.linkedin.com/in/crissrodriguez/) | [Portfolio](https://www.yosola.co/) | [GitHub](https://github.com/Yosolita1978)
-yosola@gmail.com | 628-236-7431`,
+[your email] | [your phone]`,
           },
         ],
         tryIt:
