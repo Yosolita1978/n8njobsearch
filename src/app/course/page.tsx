@@ -2,38 +2,43 @@
 
 import Link from "next/link";
 import type { Lesson } from "@/content/types";
-import { modules } from "@/content/course";
 import {
   completedMainModuleCount,
+  getModules,
   lessonHref,
   totalMainModuleCount,
+  type Lang,
 } from "@/lib/course";
+import { ui } from "@/content/ui";
 import { applyRole } from "@/lib/role";
 import { useProgress } from "@/lib/progress";
 
 export default function CourseHome() {
-  const { hydrated, role, isComplete } = useProgress();
+  const { hydrated, role, lang, isComplete } = useProgress();
+
+  // Fall back to "en" before hydration so server and client first paint match.
+  const activeLang: Lang = hydrated ? lang : "en";
+  const t = ui[activeLang].course;
 
   // Avoid rendering role-dependent copy until we have read localStorage,
   // so the server and client first paint match.
   if (!hydrated) {
-    return <div className="mx-auto max-w-3xl px-4 py-10 text-muted">Loading…</div>;
+    return (
+      <div className="mx-auto max-w-3xl px-4 py-10 text-muted">{t.loading}</div>
+    );
   }
 
   // The course is gated on having a role. Nothing else is hard-locked.
   if (!role) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16 text-center">
-        <h1 className="text-2xl font-bold">First, name your role</h1>
-        <p className="mt-3 text-muted">
-          The whole course is built around one role you choose. Write it on the
-          home page and the course unlocks.
-        </p>
+        <h1 className="text-2xl font-bold">{t.needRoleTitle}</h1>
+        <p className="mt-3 text-muted">{t.needRoleBody}</p>
         <Link
           href="/"
           className="mt-6 inline-block rounded-lg bg-accent px-5 py-3 font-semibold text-white"
         >
-          Write my target role
+          {t.needRoleCta}
         </Link>
       </div>
     );
@@ -44,10 +49,11 @@ export default function CourseHome() {
 
   // Three branches: the main build (numbered modules), the template shortcut,
   // and the optional advanced track. Splitting keeps the numbers to the course.
+  const courseModules = getModules(activeLang);
   const SPECIAL = new Set(["m11-template", "m12-advanced"]);
-  const mainModules = modules.filter((m) => !SPECIAL.has(m.id));
-  const templateModule = modules.find((m) => m.id === "m11-template");
-  const advancedModule = modules.find((m) => m.id === "m12-advanced");
+  const mainModules = courseModules.filter((m) => !SPECIAL.has(m.id));
+  const templateModule = courseModules.find((m) => m.id === "m11-template");
+  const advancedModule = courseModules.find((m) => m.id === "m12-advanced");
 
   const lessonRow = (moduleId: string, lesson: Lesson) => {
     const done = isComplete(lesson.id);
@@ -69,7 +75,7 @@ export default function CourseHome() {
           </span>
           <span className="flex-1 text-sm">{lesson.title}</span>
           <span className="text-xs text-muted">
-            {lesson.estMinutes} min · {lesson.device}
+            {ui[activeLang].lesson.minutesDevice(lesson.estMinutes, lesson.device)}
           </span>
         </Link>
       </li>
@@ -79,28 +85,24 @@ export default function CourseHome() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-10">
       <header className="space-y-3">
-        <p className="text-sm text-muted">Your target role</p>
+        <p className="text-sm text-muted">{t.yourRole}</p>
         <h1 className="text-2xl font-bold tracking-tight">{role}</h1>
         <p className="text-sm text-muted">
-          {doneModules} of {totalModules} modules done
+          {t.modulesDone(doneModules, totalModules)}
         </p>
       </header>
 
       <aside className="mt-5 rounded-r-lg border-l-4 border-accent bg-accent/5 py-3 pl-4 pr-4">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
-          What to expect
+          {t.expectTitle}
         </p>
-        <p className="mt-1 text-sm text-muted">
-          You can start from zero here. No experience needed. Go at your own
-          pace, and in two modules you will break something on purpose so you
-          learn how to fix it.
-        </p>
+        <p className="mt-1 text-sm text-muted">{t.expectBody}</p>
       </aside>
 
       {/* Branch 1 — the main build, numbered modules. */}
       <section className="mt-8">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          The build, step by step
+          {t.buildTitle}
         </h2>
         <ol className="mt-3 space-y-4">
           {mainModules.map((mod, index) => (
@@ -109,7 +111,7 @@ export default function CourseHome() {
               className="rounded-xl border border-border bg-card p-5"
             >
               <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                Module {index + 1}
+                {t.moduleLabel(index + 1)}
               </p>
               <h3 className="mt-1 text-lg font-semibold">{mod.title}</h3>
               <p className="mt-1 text-sm text-muted">

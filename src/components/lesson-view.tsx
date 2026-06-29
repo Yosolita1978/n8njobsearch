@@ -1,13 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import type { Aside, AsideTone } from "@/content/types";
-import type { Lesson } from "@/content/types";
+import type { Aside, AsideTone, Lesson } from "@/content/types";
+import type { Lang } from "@/lib/course";
+import { ui } from "@/content/ui";
 import { applyRole } from "@/lib/role";
 import { useProgress } from "@/lib/progress";
 import { CopyBlock } from "@/components/copy-block";
 
-type NavLink = { href: string; title: string } | null;
+export type NavLink = { href: string; title: string } | null;
+
+// Everything one lesson needs to render, already resolved for a single
+// language. The server route builds one of these per language and hands both
+// to the view, which picks the active one — so the page can stay statically
+// generated while the language stays a client-side choice.
+export type LessonViewData = {
+  lesson: Lesson;
+  moduleLabel: string;
+  prev: NavLink;
+  next: NavLink;
+};
 
 // Full class strings per tone, since Tailwind cannot build class names at runtime.
 const ASIDE_TONES: Record<AsideTone, { box: string; title: string; body: string }> = {
@@ -18,19 +30,18 @@ const ASIDE_TONES: Record<AsideTone, { box: string; title: string; body: string 
 };
 
 export function LessonView({
-  lesson,
-  moduleLabel,
-  prev,
-  next,
+  byLang,
 }: {
-  lesson: Lesson;
-  moduleLabel: string;
-  prev: NavLink;
-  next: NavLink;
+  byLang: Record<Lang, LessonViewData>;
 }) {
-  const { hydrated, role, isComplete, toggleComplete } = useProgress();
+  const { hydrated, role, lang, isComplete, toggleComplete } = useProgress();
 
-  // Until hydrated we do not know the role, so hold role-dependent text.
+  // Until hydrated we do not know the language or role, so fall back to "en"
+  // to match what the server rendered, then re-render once we know.
+  const activeLang: Lang = hydrated ? lang : "en";
+  const { lesson, moduleLabel, prev, next } = byLang[activeLang];
+  const t = ui[activeLang].lesson;
+
   const r = hydrated ? role : "";
   const done = hydrated && isComplete(lesson.id);
 
@@ -66,12 +77,12 @@ export function LessonView({
       </p>
       <h1 className="mt-1 text-2xl font-bold tracking-tight">{lesson.title}</h1>
       <p className="mt-2 text-sm text-muted">
-        {lesson.estMinutes} min · {lesson.device}
+        {t.minutesDevice(lesson.estMinutes, lesson.device)}
       </p>
 
       <aside className="mt-6 rounded-r-lg border-l-4 border-accent bg-accent/5 py-4 pl-5 pr-5">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-accent">
-          Why this matters
+          {t.why}
         </h2>
         <p className="mt-2">{applyRole(lesson.why, r)}</p>
       </aside>
@@ -93,7 +104,7 @@ export function LessonView({
       ) : null}
 
       <section className="mt-6">
-        <h2 className="text-lg font-semibold">Steps</h2>
+        <h2 className="text-lg font-semibold">{t.steps}</h2>
         <ol className="mt-3 space-y-2">
           {lesson.steps.map((step, i) => (
             <li key={i} className="flex flex-col gap-3">
@@ -126,7 +137,7 @@ export function LessonView({
 
       {lesson.links && lesson.links.length > 0 ? (
         <section className="mt-6">
-          <h2 className="text-lg font-semibold">Links</h2>
+          <h2 className="text-lg font-semibold">{t.links}</h2>
           <ul className="mt-3 space-y-2">
             {lesson.links.map((link, i) => (
               <li key={i}>
@@ -147,7 +158,7 @@ export function LessonView({
 
       {lesson.snippets && lesson.snippets.length > 0 ? (
         <section className="mt-6 space-y-3">
-          <h2 className="text-lg font-semibold">Snippets</h2>
+          <h2 className="text-lg font-semibold">{t.snippets}</h2>
           {lesson.snippets.map((snippet, i) => (
             <CopyBlock key={i} label={snippet.label} code={snippet.code} />
           ))}
@@ -158,7 +169,7 @@ export function LessonView({
 
       <section className="mt-6 rounded-xl border border-accent/30 bg-card p-5">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-accent">
-          Try it
+          {t.tryIt}
         </h2>
         <p className="mt-2">{applyRole(lesson.tryIt, r)}</p>
       </section>
@@ -166,7 +177,7 @@ export function LessonView({
       {lesson.download ? (
         <section className="mt-6 rounded-xl border border-accent/30 bg-card p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-accent">
-            Import the finished workflow
+            {t.importTitle}
           </h2>
           <p className="mt-2 text-muted">{lesson.download.label}</p>
           <a
@@ -174,7 +185,7 @@ export function LessonView({
             download={lesson.download.filename}
             className="mt-4 inline-block rounded-lg bg-accent px-4 py-2 font-semibold text-white"
           >
-            Download {lesson.download.filename}
+            {t.download(lesson.download.filename)}
           </a>
         </section>
       ) : null}
@@ -182,7 +193,7 @@ export function LessonView({
       {lesson.pitfall ? (
         <section className="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-5">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-amber-700">
-            Watch out: {lesson.pitfall.title}
+            {t.watchOut(lesson.pitfall.title)}
           </h2>
           <p className="mt-2 text-amber-900">
             {applyRole(lesson.pitfall.body, r)}
@@ -201,7 +212,7 @@ export function LessonView({
               : "bg-accent text-white"
           }`}
         >
-          {done ? "Done — tap to undo" : "Mark this lesson done"}
+          {done ? t.undoDone : t.markDone}
         </button>
       </section>
 
@@ -219,7 +230,7 @@ export function LessonView({
           </Link>
         ) : (
           <Link href="/course" className="text-right text-accent hover:underline">
-            Back to course →
+            {t.backToCourse}
           </Link>
         )}
       </nav>

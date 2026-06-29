@@ -3,14 +3,19 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useProgress } from "@/lib/progress";
+import { ui } from "@/content/ui";
+import type { Lang } from "@/lib/course";
 
 // The single required input on the landing page. Writing a role unlocks
 // the course and is woven into lesson copy from then on.
 
 export function RoleForm() {
   const router = useRouter();
-  const { hydrated, role, setRole } = useProgress();
+  const { hydrated, role, lang, setRole } = useProgress();
   const [draft, setDraft] = useState("");
+
+  const activeLang: Lang = hydrated ? lang : "en";
+  const t = ui[activeLang].roleForm;
 
   // Once hydrated, seed the box with any role already saved.
   const value = draft || (hydrated ? role : "");
@@ -26,7 +31,7 @@ export function RoleForm() {
   return (
     <form onSubmit={submit} className="space-y-3">
       <label htmlFor="role" className="block text-sm font-medium">
-        Your target role, in one sentence
+        {t.label}
       </label>
       <input
         id="role"
@@ -34,7 +39,7 @@ export function RoleForm() {
         type="text"
         value={value}
         onChange={(event) => setDraft(event.target.value)}
-        placeholder="a fully remote instructional designer role"
+        placeholder={t.placeholder}
         className="w-full rounded-lg border border-border bg-card px-4 py-3 text-base outline-none focus:border-accent"
         autoComplete="off"
       />
@@ -43,11 +48,9 @@ export function RoleForm() {
         disabled={value.trim().length === 0}
         className="w-full rounded-lg bg-accent px-4 py-3 text-base font-semibold text-white disabled:opacity-40"
       >
-        Start the course
+        {t.submit}
       </button>
-      <p className="text-xs text-muted">
-        This stays in your browser only. Nothing is sent anywhere.
-      </p>
+      <p className="text-xs text-muted">{t.privacy}</p>
     </form>
   );
 }

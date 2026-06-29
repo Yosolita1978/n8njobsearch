@@ -7,13 +7,16 @@ import {
   useEffect,
   useState,
 } from "react";
+import type { Lang } from "@/lib/course";
 
-// The learner's state lives only in their browser. We store two things:
-// their target role and the ids of the lessons they have marked done.
+// The learner's state lives only in their browser. We store their target
+// role, the ids of the lessons they have marked done, their rubric marks,
+// and their chosen language.
 
 const ROLE_KEY = "n8njob.role";
 const DONE_KEY = "n8njob.completed";
 const RUBRIC_KEY = "n8njob.rubric";
+const LANG_KEY = "n8njob.lang";
 
 // Rubric marks: one map from "<rubricId>:<criterionId>" to the chosen
 // level label, persisted under a single key like the lessons array.
@@ -27,6 +30,8 @@ type ProgressValue = {
   hydrated: boolean; // true once we have read localStorage on the client
   role: string;
   setRole: (role: string) => void;
+  lang: Lang; // chosen interface/content language; defaults to "en"
+  setLang: (lang: Lang) => void;
   completed: string[];
   isComplete: (lessonId: string) => boolean;
   toggleComplete: (lessonId: string) => void;
@@ -65,18 +70,26 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const [role, setRoleState] = useState("");
   const [completed, setCompleted] = useState<string[]>([]);
   const [marks, setMarks] = useState<RubricMarks>({});
+  const [lang, setLangState] = useState<Lang>("en");
 
   // Read from localStorage once, on the client, after first render.
   useEffect(() => {
     setRoleState(window.localStorage.getItem(ROLE_KEY) ?? "");
     setCompleted(readArray(window.localStorage.getItem(DONE_KEY)));
     setMarks(readMarks(window.localStorage.getItem(RUBRIC_KEY)));
+    // Only "es" overrides the default; anything else (missing, garbage) is "en".
+    setLangState(window.localStorage.getItem(LANG_KEY) === "es" ? "es" : "en");
     setHydrated(true);
   }, []);
 
   const setRole = useCallback((next: string) => {
     setRoleState(next);
     window.localStorage.setItem(ROLE_KEY, next);
+  }, []);
+
+  const setLang = useCallback((next: Lang) => {
+    setLangState(next);
+    window.localStorage.setItem(LANG_KEY, next);
   }, []);
 
   const toggleComplete = useCallback((lessonId: string) => {
@@ -124,6 +137,8 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     hydrated,
     role,
     setRole,
+    lang,
+    setLang,
     completed,
     isComplete,
     toggleComplete,
