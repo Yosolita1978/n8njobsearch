@@ -5,6 +5,7 @@ import { ProgressProvider } from "@/lib/progress";
 import { SiteHeader } from "@/components/site-header";
 import { LocalizedMeta } from "@/components/localized-meta";
 import { ui } from "@/content/ui";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,6 +41,7 @@ export default function RootLayout({
           <SiteHeader />
           <main className="flex-1">{children}</main>
         </ProgressProvider>
+        <Analytics />
       </body>
     </html>
   );
